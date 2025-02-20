@@ -20,9 +20,9 @@ class CalendarReleaseController extends Controller
         try {
             $client = new PostmarkClient(env('POSTMARK_TOKEN'));
 
-            // Get all emails of users subscribed to the 'testBatch' list
+            // Get all emails of users subscribed to the 'calendar_release' list
             $emails = User::whereHas('subscriptions', function ($query) {
-                $query->where('list_name', 'testBatch')->where('subscribed', true);
+                $query->where('list_name', 'calendar_release')->where('subscribed', true);
             })->pluck('email');
 
             if ($emails->isEmpty()) {

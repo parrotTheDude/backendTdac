@@ -31,8 +31,8 @@ Route::middleware(['auth:sanctum'])->get('/user', function (Request $request) {
     return $request->user();
 });
 
-// Send batch newsletter
-Route::get('/sendBatchNewsletter', [NewsletterController::class, 'sendBatchNewsletter']);
+// Protect sendBatchNewsletter with Sanctum authentication
+Route::middleware('auth:sanctum')->get('/sendBatchNewsletter', [NewsletterController::class, 'sendBatchNewsletter']);
 
-// Define the API route for sending batch calendar releases (no authentication required)
-Route::get('/sendBatchCalendarRelease', [CalendarReleaseController::class, 'sendBatchCalendarRelease']);
+// Protect sendBatchCalendarRelease with Sanctum authentication
+Route::middleware('auth:sanctum')->get('/sendBatchCalendarRelease', [CalendarReleaseController::class, 'sendBatchCalendarRelease']);
