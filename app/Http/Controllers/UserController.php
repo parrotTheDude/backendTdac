@@ -13,10 +13,32 @@ class UserController extends Controller
      *
      * @return \Illuminate\Http\Response
      */
-    public function index()
+    public function index(Request $request)
+{
+    $query = User::query();
+
+    if ($search = $request->input('search')) {
+        $query->where(function ($q) use ($search) {
+            $q->where('name', 'like', "%{$search}%")
+              ->orWhere('last_name', 'like', "%{$search}%")
+              ->orWhere('email', 'like', "%{$search}%")
+              ->orWhere('user_type', 'like', "%{$search}%");
+        });
+    }
+
+    $users = $query->get();
+
+    if ($request->wantsJson()) {
+        return response()->json($users);
+    }
+
+    return view('users.index', compact('users', 'search'));
+}
+    
+    // Display user creation form
+    public function create()
     {
-        $users = User::all(); // Get all users
-        return response()->json($users); // Return users as JSON
+        return view('users.create');
     }
 
     /**
@@ -63,18 +85,16 @@ class UserController extends Controller
      * @param  int  $id
      * @return \Illuminate\Http\Response
      */
-    public function show($id)
-    {
-        // Find user by ID
-        $user = User::find($id);
+    public function show($id, Request $request)
+{
+    $user = User::findOrFail($id);
 
-        if (!$user) {
-            return response()->json(['message' => 'User not found'], 404); // User not found
-        }
-
-        // Return the user
+    if ($request->wantsJson()) {
         return response()->json($user);
     }
+
+    return view('users.show', compact('user'));
+}
 
     /**
      * Update the specified user by ID.
@@ -84,34 +104,28 @@ class UserController extends Controller
      * @return \Illuminate\Http\Response
      */
     public function update(Request $request, $id)
-    {
-        // Find the user by ID
-        $user = User::find($id);
+{
+    $user = User::findOrFail($id);
 
-        if (!$user) {
-            return response()->json(['message' => 'User not found'], 404); // User not found
-        }
+    $request->validate([
+        'email' => 'email|unique:users,email,' . $id,
+        'name' => 'string|max:255',
+        'last_name' => 'string|max:255',
+        'user_type' => 'string|max:50',
+        'gender' => 'nullable|string|max:10',
+        'password' => 'nullable|min:6',
+    ]);
 
-        // Validate input
-        $request->validate([
-            'email' => 'email|unique:users,email,' . $id, // Ensure email is unique except for this user
-            'name' => 'string|max:255', // Optional: Name is a string with max length
-            'last_name' => 'string|max:255', // Optional: Last name string
-            'user_type' => 'string|max:50', // Optional: User type string
-            'gender' => 'nullable|string|max:10', // Gender is optional
-            'password' => 'nullable|min:6', // Password is optional
-        ]);
+    $data = $request->only(['name', 'last_name', 'email', 'user_type', 'gender']);
 
-        // If password is provided, hash it
-        $password = $request->password ? Hash::make($request->password) : $user->password;
-
-        // Update the user
-        $user->update($request->only(['name', 'last_name', 'email', 'user_type', 'gender']) + ['password' => $password]);
-
-
-        // Return the updated user
-        return response()->json(['message' => 'User updated successfully', 'user' => $user]);
+    if ($request->filled('password')) {
+        $data['password'] = Hash::make($request->password);
     }
+
+    $user->update($data);
+
+    return redirect()->route('users.show', $user->id)->with('status', 'User updated successfully!');
+}
 
     /**
      * Remove the specified user by ID.

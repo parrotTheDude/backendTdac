@@ -48,7 +48,7 @@ class CalendarReleaseController extends Controller
                         NULL,
                         'none', 
                         NULL, 
-                        'calendar_release'
+                        'calender-release'
                     );
                     
                     // Log Postmark response (success or failure)
