@@ -22,7 +22,7 @@ class NewsletterController extends Controller
 
             // Get all emails of users subscribed to the 'testBatch' list
             $emails = User::whereHas('subscriptions', function ($query) {
-                $query->where('list_name', 'testBatch')->where('subscribed', true);
+                $query->where('list_name', 'newsletter')->where('subscribed', true);
             })->pluck('email');
 
             if ($emails->isEmpty()) {
