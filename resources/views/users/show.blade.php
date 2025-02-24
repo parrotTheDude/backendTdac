@@ -29,23 +29,58 @@
             <form method="POST" action="{{ route('users.update', $user->id) }}" class="bg-white p-6 shadow rounded-md">
                 @csrf
 
-                <div class="grid grid-cols-2 gap-4">
-                    <input name="name" type="text" required value="{{ $user->name }}" placeholder="First Name"
-                        class="px-3 py-2 border rounded-md">
+                <!-- Name fields are now optional -->
+<div class="grid grid-cols-2 gap-4">
+    <input
+        name="name"
+        type="text"
+        value="{{ $user->name }}"
+        placeholder="First Name (Optional)"
+        class="px-3 py-2 border rounded-md"
+    >
 
-                    <input name="last_name" type="text" required value="{{ $user->last_name }}" placeholder="Last Name"
-                        class="px-3 py-2 border rounded-md">
-                </div>
+    <input
+        name="last_name"
+        type="text"
+        value="{{ $user->last_name }}"
+        placeholder="Last Name (Optional)"
+        class="px-3 py-2 border rounded-md"
+    >
+</div>
 
                 <input name="email" type="email" required value="{{ $user->email }}" placeholder="Email"
                     class="w-full px-3 py-2 border rounded-md mt-4">
 
                 <div class="grid grid-cols-2 gap-4 mt-4">
-                    <input name="user_type" type="text" required value="{{ $user->user_type }}" placeholder="User Type"
-                        class="px-3 py-2 border rounded-md">
+                    <!-- user_type dropdown -->
+<select name="user_type" class="px-3 py-2 border rounded-md" required>
+    <option value="">Select User Type</option>
+    @foreach($userTypes as $type)
+        @php
+            $displayType = ucfirst($type);
+            $valueType   = strtolower($type);
+        @endphp
+        <option value="{{ $valueType }}"
+            @if(strtolower($user->user_type) === $valueType) selected @endif>
+            {{ $displayType }}
+        </option>
+    @endforeach
+</select>
 
-                    <input name="gender" type="text" value="{{ $user->gender }}" placeholder="Gender"
-                        class="px-3 py-2 border rounded-md">
+<!-- gender dropdown -->
+<select name="gender" class="px-3 py-2 border rounded-md">
+    <option value="">Select Gender (optional)</option>
+    @foreach($genders as $genderVal)
+        @php
+            $displayGender = ucfirst($genderVal);
+            $valueGender   = strtolower($genderVal);
+        @endphp
+        <option value="{{ $valueGender }}"
+            @if(strtolower($user->gender) === $valueGender) selected @endif>
+            {{ $displayGender }}
+        </option>
+    @endforeach
+</select>
                 </div>
 
                 <input name="password" type="password" placeholder="New Password (leave blank to keep current)"

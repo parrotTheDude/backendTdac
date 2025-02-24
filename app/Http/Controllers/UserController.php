@@ -13,10 +13,14 @@ class UserController extends Controller
      *
      * @return \Illuminate\Http\Response
      */
-    public function index(Request $request)
+public function index(Request $request)
 {
+    $sort = $request->input('sort', 'name');         // Default sort column
+    $direction = $request->input('direction', 'asc'); // Default sort direction
+
     $query = User::query();
 
+    // Existing search logic
     if ($search = $request->input('search')) {
         $query->where(function ($q) use ($search) {
             $q->where('name', 'like', "%{$search}%")
@@ -26,58 +30,85 @@ class UserController extends Controller
         });
     }
 
+    // Apply sorting
+    // To avoid SQL injection, ensure $sort is in an allowed list
+    $allowedSorts = ['name', 'last_name', 'email', 'user_type', 'gender'];
+    if (! in_array($sort, $allowedSorts)) {
+        $sort = 'name';
+    }
+    $direction = ($direction === 'desc') ? 'desc' : 'asc';
+
+    $query->orderBy($sort, $direction);
+
     $users = $query->get();
 
-    if ($request->wantsJson()) {
-        return response()->json($users);
-    }
-
-    return view('users.index', compact('users', 'search'));
+    return view('users.index', [
+        'users'     => $users,
+        'search'    => $search,
+        'sort'      => $sort,
+        'direction' => $direction,
+    ]);
 }
     
-    // Display user creation form
-    public function create()
-    {
-        return view('users.create');
-    }
+public function create()
+{
+    $userTypes = User::whereNotNull('user_type')
+                     ->distinct()
+                     ->pluck('user_type');
 
-    /**
-     * Store a newly created user.
-     *
-     * @param  \Illuminate\Http\Request  $request
-     * @return \Illuminate\Http\Response
-     */
-    public function store(Request $request)
-    {
-        // Validate input, making password and gender optional
-        $request->validate([
-            'email' => 'required|email|unique:users,email', // Ensure email is unique
-            'name' => 'required|string|max:255', // Name is required
-            'last_name' => 'required|string|max:255', // Last name is required
-            'user_type' => 'required|string|max:50', // User type is required
-            'gender' => 'nullable|string|max:10', // Gender is optional
-            'password' => 'nullable|min:6', // Password is optional, but must be at least 6 characters if provided
-        ]);
+    // Filter out 'master' using a closure
+    $userTypes = $userTypes->filter(function ($type) {
+        return strtolower($type) !== 'master';
+    });
 
-        // If password is provided, hash it
-        $password = $request->password ? Hash::make($request->password) : null;
+    // Same for gender if needed
+    $genders = User::whereNotNull('gender')
+                   ->distinct()
+                   ->pluck('gender');
 
-        // Create the user
-        $user = User::create([
-            'name' => $request->name,
-            'last_name' => $request->last_name,
-            'email' => $request->email,
-            'password' => $password, // Hash password if provided
-            'user_type' => $request->user_type,
-            'gender' => $request->gender, // Gender is optional
-        ]);
-        
-        // Subscribe the user to all lists
-        (new SubscriptionController())->subscribeUserToAllLists($user);
+    return view('users.create', compact('userTypes', 'genders'));
+}
 
-        // Return the created user
-        return response()->json(['message' => 'User created successfully', 'user' => $user], 201);
-    }
+public function store(Request $request)
+{
+    // Validate input
+    $request->validate([
+        'email' => 'required|email|unique:users,email',
+        'name' => 'required|string|max:255',
+        'last_name' => 'required|string|max:255',
+        'user_type' => 'required|string|max:50',
+        'gender' => 'nullable|string|max:10',
+        'password' => 'nullable|min:6',
+    ]);
+
+    // If password provided, hash it
+    $password = $request->filled('password')
+        ? Hash::make($request->password)
+        : null;
+
+    // Build your data array
+    $data = [
+        'name'       => $request->name,
+        'last_name'  => $request->last_name,
+        'email'      => $request->email,
+        'password'   => $request->filled('password')
+            ? Hash::make($request->password)
+            : null,
+        // Make sure to store these fields as lowercase:
+        'user_type'  => strtolower($request->input('user_type')),
+        'gender'     => $request->filled('gender')
+                        ? strtolower($request->input('gender'))
+                        : null,
+    ];
+
+    // Create the user
+    $user = User::create($data);
+
+
+    // Return or redirect
+    return redirect()->route('users.index')
+                     ->with('status', 'User created successfully!');
+}
 
     /**
      * Display the specified user by ID.
@@ -85,15 +116,25 @@ class UserController extends Controller
      * @param  int  $id
      * @return \Illuminate\Http\Response
      */
-    public function show($id, Request $request)
+public function show($id, Request $request)
 {
     $user = User::findOrFail($id);
+
+    $userTypes = User::whereNotNull('user_type')
+                     ->distinct()
+                     ->pluck('user_type');
+    // filter out master
+    $userTypes = $userTypes->filter(fn($type) => strtolower($type) !== 'master');
+
+    $genders = User::whereNotNull('gender')
+                   ->distinct()
+                   ->pluck('gender');
 
     if ($request->wantsJson()) {
         return response()->json($user);
     }
 
-    return view('users.show', compact('user'));
+    return view('users.show', compact('user', 'userTypes', 'genders'));
 }
 
     /**
@@ -109,22 +150,33 @@ class UserController extends Controller
 
     $request->validate([
         'email' => 'email|unique:users,email,' . $id,
-        'name' => 'string|max:255',
-        'last_name' => 'string|max:255',
+        'name' => 'nullable|string|max:255',
+        'last_name' => 'nullable|string|max:255',
         'user_type' => 'string|max:50',
         'gender' => 'nullable|string|max:10',
         'password' => 'nullable|min:6',
     ]);
 
-    $data = $request->only(['name', 'last_name', 'email', 'user_type', 'gender']);
+    // Find user
+    $user = User::findOrFail($id);
 
+    // Build your updated data
+    $data = $request->only(['name', 'last_name', 'email']);
+    // If password is provided
     if ($request->filled('password')) {
         $data['password'] = Hash::make($request->password);
     }
 
+    // Always store these fields in lowercase
+    $data['user_type'] = strtolower($request->input('user_type'));
+    $data['gender']    = $request->filled('gender')
+        ? strtolower($request->input('gender'))
+        : null;
+
     $user->update($data);
 
-    return redirect()->route('users.show', $user->id)->with('status', 'User updated successfully!');
+    return redirect()->route('users.show', $user->id)
+                     ->with('status', 'User updated successfully!');
 }
 
     /**

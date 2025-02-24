@@ -42,10 +42,10 @@ class SubscriptionController extends Controller
                 ['subscribed' => true] // Set subscribed to true
             );
 
-            return response()->json(['message' => 'Subscribed successfully']);
+            return redirect()->back()->with('status', 'Subscribed successfully!');
         } catch (\Exception $e) {
             // Catch the exception and return the error message
-            return response()->json(['error' => $e->getMessage()], 500);
+            return redirect()->back()->with('status', 'Error subscribing');
         }
     }
 
@@ -76,7 +76,8 @@ class SubscriptionController extends Controller
         // Unsubscribe the user by setting 'subscribed' to false
         $subscription->update(['subscribed' => false]);
 
-        return response()->json(['message' => 'Unsubscribed successfully']);
+        // Instead of returning JSON:
+        return redirect()->back()->with('status', 'Unsubscribed successfully!');
     }
     
     public function subscribeUserToAllLists(User $user)
@@ -93,4 +94,51 @@ class SubscriptionController extends Controller
             ]);
         }
     }
+    
+public function listIndex(Request $request)
+{
+    // If you still want to handle JSON
+    if ($request->wantsJson()) {
+        $lists = Subscription::select('list_name')->distinct()->get();
+        return response()->json(['lists' => $lists]);
+    }
+
+    // In a single query, count how many are subscribed vs. unsubscribed per list
+    // Uses raw SUM trick: (subscribed = 1) => 1 for subscribed, 0 for unsubscribed
+    // and vice versa
+    $lists = \DB::table('subscriptions')
+        ->select('list_name',
+            \DB::raw("SUM(CASE WHEN subscribed = 1 THEN 1 ELSE 0 END) as subscribed_count"),
+            \DB::raw("SUM(CASE WHEN subscribed = 0 THEN 1 ELSE 0 END) as unsubscribed_count")
+        )
+        ->groupBy('list_name')
+        ->get();
+
+    return view('subscriptions.index', compact('lists'));
+}
+
+public function listShow(Request $request, $listName)
+{
+    // If user wants JSON, fine:
+    if ($request->wantsJson()) {
+        $subscribers = Subscription::with('user')
+            ->where('list_name', $listName)
+            ->where('subscribed', true)
+            ->get();
+        return response()->json(['list_name' => $listName, 'subscribers' => $subscribers]);
+    }
+
+    // Otherwise return the Blade view
+    $subscribers = Subscription::with('user')
+        ->where('list_name', $listName)
+        ->where('subscribed', true)
+        ->get();
+
+    return view('subscriptions.show', [
+        'listName' => $listName,
+        'subscribers' => $subscribers,
+    ]);
+}
+
+
 }

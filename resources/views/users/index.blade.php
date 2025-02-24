@@ -9,40 +9,9 @@
 </head>
 <body class="bg-gray-50 min-h-screen flex flex-col">
 
-    <!-- Header -->
-    <header class="bg-white shadow-md p-4 flex justify-between items-center">
-        <div class="flex items-center space-x-4">
-            <img src="https://thatdisabilityadventurecompany.com.au/icons/logo.webp" alt="TDAC Logo" class="w-40">
-            <h1 class="text-xl font-semibold">Admin Dashboard</h1>
-        </div>
-
-        <form method="POST" action="{{ route('logout') }}">
-            @csrf
-            <button type="submit" class="bg-indigo-500 text-white px-4 py-2 rounded-md hover:bg-indigo-600">
-                Logout
-            </button>
-        </form>
-    </header>
-
+    @include('partials.header')
     <div class="flex flex-grow">
-
-        <!-- Sidebar Navigation -->
-        <nav class="w-64 bg-white shadow-md p-6">
-            <ul class="space-y-2">
-                <li>
-                    <a href="{{ route('dashboard') }}" class="text-gray-600 hover:text-indigo-600">Dashboard Home</a>
-                </li>
-                <li>
-                    <a href="{{ route('users.index') }}" class="text-indigo-600 font-semibold">Users</a>
-                </li>
-                <li>
-                    <a href="#" class="text-gray-600 hover:text-indigo-600">Subscription Lists</a>
-                </li>
-                <li>
-                    <a href="#" class="text-gray-600 hover:text-indigo-600">Bulk Emails</a>
-                </li>
-            </ul>
-        </nav>
+        @include('partials.sidebar')
 
         <!-- Main Content Area -->
         <main class="flex-grow p-6">
@@ -80,32 +49,69 @@
         + Add New User
     </a>
 </div>
-            <table class="w-full bg-white shadow rounded-md overflow-hidden">
-                <thead class="bg-gray-200">
-                    <tr>
-                        <th class="py-3 px-4">Name</th>
-                        <th class="py-3 px-4">Last Name</th>
-                        <th class="py-3 px-4">Email</th>
-                        <th class="py-3 px-4">User Type</th>
-                        <th class="py-3 px-4">Gender</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    @foreach($users as $user)
-                        <tr class="border-b hover:bg-gray-100">
-                            <td class="py-3 px-4">{{ $user->name }}</td>
-                            <td class="py-3 px-4">{{ $user->last_name }}</td>
-                            <td class="py-3 px-4">
-                                <a href="{{ route('users.show', $user->id) }}" class="text-indigo-600 hover:underline">
-                                    {{ $user->email }}
-                                </a>
-                            </td>
-                            <td class="py-3 px-4">{{ $user->user_type }}</td>
-                            <td class="py-3 px-4">{{ $user->gender }}</td>
-                        </tr>
-                    @endforeach
-                </tbody>
-            </table>
+            <!-- Table with sortable headers -->
+<table class="w-full bg-white shadow rounded-md overflow-hidden">
+    <thead class="bg-gray-200">
+        <tr>
+            <th class="py-3 px-4 text-left">
+                <a href="{{ route('users.index', array_merge(request()->all(), [
+                    'sort' => 'name',
+                    // If currently sorting by 'name' asc, next click is desc. Otherwise asc.
+                    'direction' => ($sort === 'name' && $direction === 'asc') ? 'desc' : 'asc',
+                ])) }}">
+                    Name
+                </a>
+            </th>
+            <th class="py-3 px-4 text-left">
+                <a href="{{ route('users.index', array_merge(request()->all(), [
+                    'sort' => 'last_name',
+                    'direction' => ($sort === 'last_name' && $direction === 'asc') ? 'desc' : 'asc',
+                ])) }}">
+                    Last Name
+                </a>
+            </th>
+            <th class="py-3 px-4 text-left">
+                <a href="{{ route('users.index', array_merge(request()->all(), [
+                    'sort' => 'email',
+                    'direction' => ($sort === 'email' && $direction === 'asc') ? 'desc' : 'asc',
+                ])) }}">
+                    Email
+                </a>
+            </th>
+            <th class="py-3 px-4 text-left">
+                <a href="{{ route('users.index', array_merge(request()->all(), [
+                    'sort' => 'user_type',
+                    'direction' => ($sort === 'user_type' && $direction === 'asc') ? 'desc' : 'asc',
+                ])) }}">
+                    User Type
+                </a>
+            </th>
+            <th class="py-3 px-4 text-left">
+                <a href="{{ route('users.index', array_merge(request()->all(), [
+                    'sort' => 'gender',
+                    'direction' => ($sort === 'gender' && $direction === 'asc') ? 'desc' : 'asc',
+                ])) }}">
+                    Gender
+                </a>
+            </th>
+        </tr>
+    </thead>
+    <tbody>
+        @foreach($users as $user)
+            <tr class="border-b hover:bg-gray-100">
+                <td class="py-3 px-4">{{ $user->name }}</td>
+                <td class="py-3 px-4">{{ $user->last_name }}</td>
+                <td class="py-3 px-4">
+                    <a href="{{ route('users.show', $user->id) }}" class="text-indigo-600 hover:underline">
+                        {{ $user->email }}
+                    </a>
+                </td>
+                <td class="py-3 px-4">{{ $user->user_type }}</td>
+                <td class="py-3 px-4">{{ $user->gender }}</td>
+            </tr>
+        @endforeach
+    </tbody>
+</table>
         </main>
 
     </div>
