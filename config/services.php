@@ -15,7 +15,8 @@ return [
     */
 
     'postmark' => [
-        'token' => env('POSTMARK_TOKEN'),
+        'token' => 'f953f025-6611-4fb4-8a63-c22387bddaf9',
+        'from_email' => 'hello@tdacvic.com',
     ],
 
     'ses' => [

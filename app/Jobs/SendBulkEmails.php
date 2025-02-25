@@ -33,8 +33,8 @@ class SendBulkEmails implements ShouldQueue
 
     public function handle()
     {
-        $client = new PostmarkClient(env('POSTMARK_TOKEN'));
-        $fromEmail = env('FROM_EMAIL');
+        $client = new PostmarkClient(config('services.postmark.token'));
+        $fromEmail = config('services.postmark.from_email');
 
         \Log::info('DEBUG: Bulk email job about to send', [
             'list_name' => $this->recipientList,

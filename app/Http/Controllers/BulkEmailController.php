@@ -15,7 +15,7 @@ class BulkEmailController extends Controller
     public function __construct()
     {
         // older Postmark library
-        $this->client = new PostmarkClient(env('POSTMARK_TOKEN'));
+        $this->client = new PostmarkClient(config('services.postmark.token'));
     }
 
     public function index()
@@ -78,7 +78,7 @@ class BulkEmailController extends Controller
             //    via sendEmailWithTemplate()
             try {
                 $this->client->sendEmailWithTemplate(
-                    env('FROM_EMAIL'),
+                    config('services.postmark.from_email'),
                     $request->testEmail,
                     (int) $validated['template_id'],
                     $variables

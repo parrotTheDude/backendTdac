@@ -10,6 +10,7 @@ use App\Models\Subscription;
 use Illuminate\Support\Str;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Mail;
+use Postmark\PostmarkClient;
 // Example mailable (you’d create it via php artisan make:mail VerificationEmail)
 use App\Mail\VerificationEmail;
 
@@ -80,19 +81,17 @@ class UserController extends Controller
             'last_name' => 'required|string|max:255',
             'user_type' => 'required|string|max:50',
             'gender' => 'nullable|string|max:10',
-            // 'password' => 'nullable|min:6', <-- removed or made optional
         ]);
 
-        // Build your data array, no password
+        // Create user
         $data = [
-            'name'      => $request->name,
-            'last_name' => $request->last_name,
-            'email'     => $request->email,
-            'user_type' => strtolower($request->input('user_type')),
-            'gender'    => $request->filled('gender')
-                            ? strtolower($request->input('gender'))
-                            : null,
-            'password'  => null, // No password for now
+        'name'       => $request->name,
+        'last_name'  => $request->last_name,
+        'email'      => $request->email,
+        'user_type'  => strtolower($request->input('user_type')),
+        'gender'     => $request->filled('gender')
+                        ? strtolower($request->input('gender'))
+                        : null,
         ];
 
         // Create the user
@@ -102,10 +101,16 @@ class UserController extends Controller
         $this->sendVerificationEmail($user);
 
         // 2) Optionally auto-subscribe based on user_type or gender
-        $this->autoSubscribeByTypeAndGender($user);
+        //$this->autoSubscribeByTypeAndGender($user);
 
-        return redirect()->route('users.index')
-                         ->with('status', 'User created! Verification link sent.');
+        return redirect()
+        ->route('users.create')
+        ->with('newUserCreated', [
+            'name'      => $user->name,
+            'last_name' => $user->last_name,
+            'email'     => $user->email,
+            'id'        => $user->id,
+        ]);
     }
 
     public function show($id, Request $request)
@@ -179,33 +184,57 @@ class UserController extends Controller
      * Sends an email verification link so the user can confirm email & set password.
      */
     private function sendVerificationEmail(User $user)
-    {
-        // Example approach: create a random token, store in a 'verify_tokens' table or use 'password_resets' table
-        $plainToken = Str::random(60);
+{
+    // 1) Generate random token & store in DB
+    $plainToken = Str::random(60);
 
-        // Up to you if you want to hash it or store plain. 
-        // For simplicity, store plain in a table 'verify_tokens'
-        DB::table('verify_tokens')->insert([
-            'email'      => $user->email,
-            'token'      => $plainToken, // or hash it
-            'created_at' => now(),
-        ]);
+    DB::table('verify_tokens')->insert([
+        'email'      => $user->email,
+        'token'      => $plainToken,
+        'created_at' => now(),
+    ]);
 
-        // Now send the user an email with the link
-        // e.g. mysite.com/verify-and-set-password/{token}
-        $verificationUrl = url("/verify-and-set-password/$plainToken");
+    // 2) Build the verification URL
+    $verificationUrl = url('/verify-and-set-password/' . $plainToken);
+    
+    \Log::info('sendVerificationEmail called', ['email' => $user->email]);
 
-        // If you have a Mailable:
-        Mail::to($user->email)->send(new VerificationEmail($user, $verificationUrl));
+    // 3) Postmark client
+    $client = new PostmarkClient(config('services.postmark.token'));
+    $fromEmail = config('services.postmark.from_email'); // must be verified in Postmark
 
-        // Or if you want to do a raw mail:
-        /*
-        Mail::raw(\"Hello {$user->name},\\nClick here to verify: {$verificationUrl}\", function($message) use ($user){
-            $message->to($user->email)
-                    ->subject('Verify Your Email & Set Password');
-        });
-        */
+    // 4) Postmark template ID & model
+    //    If you have a postmark template set up specifically for verification:
+    $templateId = 39165532; // your numeric template ID
+    $templateModel = [
+        "accountCreationUrl" => $verificationUrl
+    ];
+
+    // 5) Actually send
+    try {
+        \Log::info('Attempting to send Postmark verification email', ['email' => $user->email]);
+        $client->sendEmailWithTemplate(
+            $fromEmail,
+            $user->email,
+            $templateId,
+            $templateModel,
+            true,              // inline css
+            'Account Creation', // Tag
+            true,              // track opens
+            null,              // replyTo
+            null,              // cc
+            null,              // bcc
+            null,              // headers
+            null,              // attachments
+            'None',            // trackLinks
+            null,              // metaData
+            'admin' // messageStream
+        );
+    } catch (\Exception $e) {
+        \Log::error('Postmark verification email failed: ' . $e->getMessage());
+        // handle or rethrow if needed
     }
+}
 
     /**
      * Automatically subscribes the user based on user_type or gender.
@@ -229,4 +258,77 @@ class UserController extends Controller
             );
         }
     }
+    
+    public function showSetPasswordForm($token)
+{
+    // check if record for token exists:
+    $record = DB::table('verify_tokens')->where('token', $token)->first();
+    if (!$record) {
+        return redirect()->route('login')->withErrors('Invalid or expired token.');
+    }
+
+    // If valid, show a form so user can choose a password
+    return view('auth.set-password', ['token' => $token]);
+}
+
+public function storeSetPassword(Request $request)
+{
+    $request->validate([
+        'token' => 'required',
+        'password' => 'required|min:6|confirmed',
+    ]);
+
+    // Find token
+    $record = DB::table('verify_tokens')->where('token', $request->token)->first();
+    if (!$record) {
+        return redirect()->route('login')->withErrors('Invalid or expired token.');
+    }
+
+    // Find user by email
+    $user = User::where('email', $record->email)->firstOrFail();
+
+    // Set password + mark email verified
+    $user->password = Hash::make($request->password);
+    $user->email_verified_at = now();
+    $user->save();
+
+    // Delete the token
+    DB::table('verify_tokens')->where('email', $record->email)->delete();
+
+    // If the user ticked "Subscribe to newsletter"
+    if ($request->has('subscribe')) {
+        // subscribe logic, e.g.
+        Subscription::updateOrCreate(
+            ['user_id' => $user->id, 'list_name' => 'newsletter'],
+            ['subscribed' => true]
+        );
+    }
+
+    // redirect or log in
+    return redirect()->route('login')->with('status', 'Password set! You are verified and subscribed if you selected that option.');
+}
+
+public function resendVerification($id)
+{
+    // Check if the logged-in user's ID matches $id
+    if (auth()->id() != $id) {
+        // If you also want to allow master/admin to do it for others, you can add a condition like:
+        // if (auth()->user()->user_type !== 'master')
+        //    abort(403, 'You cannot resend verification for someone else!');
+
+        abort(403, 'You cannot resend verification for someone else!');
+    }
+
+    $user = User::findOrFail($id);
+
+    // If the user is already verified, skip or show an error
+    if ($user->email_verified_at) {
+        return redirect()->back()->withErrors('User is already verified.');
+    }
+
+    // Reuse your verification logic
+    $this->sendVerificationEmail($user);
+
+    return redirect()->back()->with('status', 'Verification email resent to ' . $user->email);
+}
 }
