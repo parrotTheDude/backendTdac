@@ -30,9 +30,3 @@ Route::middleware('api')->group(function () {
 Route::middleware(['auth:sanctum'])->get('/user', function (Request $request) {
     return $request->user();
 });
-
-// Protect sendBatchNewsletter with Sanctum authentication
-Route::middleware('auth:sanctum')->get('/sendBatchNewsletter', [NewsletterController::class, 'sendBatchNewsletter']);
-
-// Protect sendBatchCalendarRelease with Sanctum authentication
-Route::middleware('auth:sanctum')->get('/sendBatchCalendarRelease', [CalendarReleaseController::class, 'sendBatchCalendarRelease']);

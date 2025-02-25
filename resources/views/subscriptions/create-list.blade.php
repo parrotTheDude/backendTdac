@@ -105,7 +105,7 @@
         function updateCodeNamePreview() {
             let val = friendlyNameInput.value.trim();
             // Transform to lowercase + underscores:
-            val = val.toLowerCase().replace(/\s+/g, '_');
+            val = val.toLowerCase().replace(/\s+/g, '-');
             // Optionally remove non-alphanumeric chars:
             // val = val.replace(/[^a-z0-9_]/g, '');
             codeNamePreview.textContent = val;

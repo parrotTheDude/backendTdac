@@ -52,7 +52,7 @@
                             <tr class="border-b hover:bg-gray-100">
                                 <td class="py-3 px-4">
                                     @php
-                                        $formattedName = ucwords(str_replace('_', ' ', $list->list_name));
+                                        $formattedName = ucwords(str_replace('-', ' ', $list->list_name));
                                     @endphp
                                     {{ $formattedName }}
                                 </td>
