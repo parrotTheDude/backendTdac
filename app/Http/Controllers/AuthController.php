@@ -19,14 +19,30 @@ class AuthController extends Controller
 
 public function login(Request $request)
 {
+    // Validate user input
+    $request->validate([
+        'email'    => 'required|email',
+        'password' => 'required',
+    ]);
+
+    // Grab credentials
     $credentials = $request->only('email','password');
 
-    if (Auth::attempt($credentials)) {
-        // success
-        return redirect()->route('home');
+    // The second parameter is "remember" => pass true/false
+    // e.g. $request->boolean('remember') if you want a strict bool
+    $remember = $request->filled('remember'); 
+      // or $request->boolean('remember')
+
+    // Attempt to log in using these credentials + remember token
+    if (Auth::attempt($credentials, $remember)) {
+        // SUCCESS: user is logged in
+        // 'remember' => true means a long-lived cookie is set
+        return redirect()->intended('dashboard')->with('status', 'Welcome back!');
     } else {
-        // fail
-        return back()->withErrors(['email' => 'Invalid credentials']);
+        // FAIL
+        return back()->withErrors([
+            'email' => 'Invalid credentials.',
+        ]);
     }
 }
 

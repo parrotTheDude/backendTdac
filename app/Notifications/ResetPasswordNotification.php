@@ -25,7 +25,7 @@ class ResetPasswordNotification extends Notification
     {
         $resetUrl = URL::to('/reset-password/' . $this->token . '?email=' . urlencode($notifiable->email));
 
-        $client = new PostmarkClient(env('POSTMARK_TOKEN'));
+        $client = new PostmarkClient(config('services.postmark.token'));
 
         $toEmail = $notifiable->email;
         $templateId = 'password-reset';
@@ -40,7 +40,7 @@ class ResetPasswordNotification extends Notification
 
         try {
             $sendResult = $client->sendEmailWithTemplate(
-                env('FROM_EMAIL'),
+                config('services.postmark.from_email'),
                 $toEmail,
                 $templateId,
                 $templateModel,

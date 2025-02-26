@@ -11,7 +11,7 @@ use App\Http\Controllers\EventController;
 use App\Http\Controllers\ProfileController;
 
 Route::group([
-    'domain' => 'backend.thatdisabilityadventurecompany.com.au',
+    'domain' => 'accounts.thatdisabilityadventurecompany.com.au',
 ], function () {
 
     /*

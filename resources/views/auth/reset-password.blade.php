@@ -1,103 +1,212 @@
-<!-- resources/views/auth/reset-password.blade.php -->
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Reset Password</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-</head>
-<body class="bg-gray-100 flex items-center justify-center min-h-screen px-4">
-    <div class="bg-white p-6 sm:p-8 rounded-lg shadow-md w-full max-w-md mx-auto">
+@extends('layouts.auth')
 
-        <!-- TDAC Logo -->
-        <div class="mb-4 flex justify-center">
-            <img src="https://thatdisabilityadventurecompany.com.au/icons/logo.webp"
-                 alt="TDAC Logo"
-                 class="w-48 h-auto">
-        </div>
+@section('title', 'Reset Password')
 
-        <h2 class="text-xl sm:text-2xl font-semibold text-center mb-6">Reset Password</h2>
+@section('content')
+<!-- TDAC Logo -->
+<div class="mb-4 flex justify-center">
+    <img 
+        src="https://thatdisabilityadventurecompany.com.au/icons/logo.webp" 
+        alt="TDAC Logo" 
+        class="w-48 h-auto"
+    >
+</div>
 
-        <form method="POST" action="{{ route('password.update') }}">
-            @csrf
-            <input type="hidden" name="token" value="{{ $token }}">
-            <input type="hidden" name="email" value="{{ request('email') }}">
+<!-- Short Instruction -->
+<p class="text-sm text-gray-600 mb-6 text-center">
+    Enter and confirm your new password below.
+</p>
 
-            <div class="mb-4">
-                <input name="password" id="password" type="password" required placeholder="New Password"
-                    class="w-full px-3 py-2 border rounded-md shadow-sm focus:outline-none focus:ring-indigo-500">
-            </div>
+@if(session('status'))
+    <div class="text-green-500 mb-4 text-center">
+        {{ session('status') }}
+    </div>
+@endif
 
-            <div class="mb-4">
-                <input name="password_confirmation" id="password_confirmation" type="password" required placeholder="Confirm Password"
-                    class="w-full px-3 py-2 border rounded-md shadow-sm focus:outline-none focus:ring-indigo-500">
-            </div>
+@if($errors->any())
+    <div class="text-red-500 mb-4 text-center">
+        <ul>
+            @foreach($errors->all() as $err)
+                <li>{{ $err }}</li>
+            @endforeach
+        </ul>
+    </div>
+@endif
 
-            <div id="password-requirements" class="text-sm mb-4">
-                <p class="mb-1">Password must include:</p>
-                <ul class="list-disc ml-5">
-                    <li id="req-length" class="text-gray-500">At least 8 characters</li>
-                    <li id="req-number" class="text-gray-500">At least one number</li>
-                    <li id="req-uppercase" class="text-gray-500">At least one uppercase letter</li>
-                    <li id="req-special" class="text-gray-500">At least one special character (e.g., !@#$%^&*)</li>
-                    <li id="req-match" class="text-gray-500">Passwords must match</li>
-                </ul>
-            </div>
+<form method="POST" action="{{ route('password.update') }}">
+    @csrf
+    <input type="hidden" name="token" value="{{ $token }}">
+    <input type="hidden" name="email" value="{{ request('email') }}">
 
-            <button id="submit-btn" disabled type="submit"
-                class="w-full bg-indigo-600 text-white py-2 rounded-md opacity-50 transition">
-                Reset Password
-            </button>
-        </form>
-
+    <!-- New Password (show/hide toggle) -->
+    <div class="mb-4 relative">
+        <label for="password" class="block text-sm font-medium text-gray-700 mb-1">
+            New Password
+        </label>
+        <input
+            id="password"
+            name="password"
+            type="password"
+            required
+            class="w-full px-3 py-2 border rounded-md shadow-sm 
+                   pr-10 focus:outline-none focus:ring-indigo-500"
+        >
+        <button
+            type="button"
+            class="absolute right-3 top-9 text-gray-500"
+            aria-label="Show or hide password"
+            onclick="togglePassword('password', 'passwordIcon')"
+        >
+            <img
+                id="passwordIcon"
+                src="{{ asset('assets/icons/eyebrow.svg') }}"
+                alt="Show password"
+                class="w-4 h-4"
+            >
+        </button>
     </div>
 
-    <script>
-        const password = document.getElementById('password');
-        const passwordConfirmation = document.getElementById('password_confirmation');
-        const submitBtn = document.getElementById('submit-btn');
+    <!-- Confirm Password (show/hide toggle) -->
+    <div class="mb-4 relative">
+        <label for="password_confirmation" class="block text-sm font-medium text-gray-700 mb-1">
+            Confirm Password
+        </label>
+        <input
+            id="password_confirmation"
+            name="password_confirmation"
+            type="password"
+            required
+            class="w-full px-3 py-2 border rounded-md shadow-sm 
+                   pr-10 focus:outline-none focus:ring-indigo-500"
+        >
+        <button
+            type="button"
+            class="absolute right-3 top-9 text-gray-500"
+            aria-label="Show or hide password"
+            onclick="togglePassword('password_confirmation', 'confirmIcon')"
+        >
+            <img
+                id="confirmIcon"
+                src="{{ asset('assets/icons/eyebrow.svg') }}"
+                alt="Show password"
+                class="w-4 h-4"
+            >
+        </button>
+    </div>
 
-        const reqLength = document.getElementById('req-length');
-        const reqNumber = document.getElementById('req-number');
-        const reqUppercase = document.getElementById('req-uppercase');
-        const reqSpecial = document.getElementById('req-special');
-        const reqMatch = document.getElementById('req-match');
+    <!-- Password Requirements with circle.svg vs correct.svg -->
+    <div id="password-requirements" class="text-sm mb-4">
+        <p class="mb-1">Password must include:</p>
+        <ul class="space-y-1 ml-5">
+            <li class="flex items-center space-x-2" id="req-length">
+                <span class="req-icon"></span>
+                <span>At least 8 characters</span>
+            </li>
+            <li class="flex items-center space-x-2" id="req-number">
+                <span class="req-icon"></span>
+                <span>At least one number</span>
+            </li>
+            <li class="flex items-center space-x-2" id="req-uppercase">
+                <span class="req-icon"></span>
+                <span>At least one uppercase letter</span>
+            </li>
+            <li class="flex items-center space-x-2" id="req-special">
+                <span class="req-icon"></span>
+                <span>At least one special character (e.g., !@#$%^&*)</span>
+            </li>
+            <li class="flex items-center space-x-2" id="req-match">
+                <span class="req-icon"></span>
+                <span>Passwords must match</span>
+            </li>
+        </ul>
+    </div>
 
-        function validatePassword() {
-            const val = password.value;
-            const confirmVal = passwordConfirmation.value;
+    <!-- Submit Button -->
+    <button
+        id="submit-btn"
+        disabled
+        type="submit"
+        class="w-full bg-indigo-600 text-white py-2 rounded-md opacity-50 transition"
+    >
+        Reset Password
+    </button>
+</form>
+@endsection
 
-            const isLength = val.length >= 8;
-            const hasNumber = /[0-9]/.test(val);
-            const hasUppercase = /[A-Z]/.test(val);
-            const hasSpecial = /[!@#$%^&*(),.?":{}|<>]/.test(val);
-            const passwordsMatch = val === confirmVal && confirmVal !== '';
+@push('scripts')
+<script>
+function togglePassword(fieldId, iconId) {
+    const passField = document.getElementById(fieldId);
+    const iconField = document.getElementById(iconId);
 
-            reqLength.classList.toggle('text-green-500', isLength);
-            reqLength.classList.toggle('text-gray-500', !isLength);
+    if (passField.type === 'password') {
+        passField.type = 'text';
+        iconField.src = '{{ asset('assets/icons/eye-close-up.svg') }}';
+        iconField.alt = 'Hide password';
+    } else {
+        passField.type = 'password';
+        iconField.src = '{{ asset('assets/icons/eyebrow.svg') }}';
+        iconField.alt = 'Show password';
+    }
+}
 
-            reqNumber.classList.toggle('text-green-500', hasNumber);
-            reqNumber.classList.toggle('text-gray-500', !hasNumber);
+const password        = document.getElementById('password');
+const passwordConfirm = document.getElementById('password_confirmation');
+const submitBtn       = document.getElementById('submit-btn');
 
-            reqUppercase.classList.toggle('text-green-500', hasUppercase);
-            reqUppercase.classList.toggle('text-gray-500', !hasUppercase);
+// Requirement elements
+const reqLength    = document.getElementById('req-length');
+const reqNumber    = document.getElementById('req-number');
+const reqUppercase = document.getElementById('req-uppercase');
+const reqSpecial   = document.getElementById('req-special');
+const reqMatch     = document.getElementById('req-match');
 
-            reqSpecial.classList.toggle('text-green-500', hasSpecial);
-            reqSpecial.classList.toggle('text-gray-500', !hasSpecial);
+// Helper to set circle/correct icons
+function setIconStatus(element, isGood) {
+    const icon = element.querySelector('.req-icon');
+    if (isGood) {
+        // Show correct.svg
+        icon.innerHTML = `
+            <img src="{{ asset('assets/icons/correct.svg') }}"
+                 alt="Correct" class="h-4 w-4"/>
+        `;
+    } else {
+        // Show circle.svg
+        icon.innerHTML = `
+            <img src="{{ asset('assets/icons/circle.svg') }}"
+                 alt="Not met" class="h-4 w-4"/>
+        `;
+    }
+}
 
-            reqMatch.classList.toggle('text-green-500', passwordsMatch);
-            reqMatch.classList.toggle('text-gray-500', !passwordsMatch);
+// Validate each requirement
+function validatePassword() {
+    const val        = password.value;
+    const confirmVal = passwordConfirm.value;
 
-            const isValid = isLength && hasNumber && hasUppercase && hasSpecial && passwordsMatch;
+    const isLength      = val.length >= 8;
+    const hasNumber     = /[0-9]/.test(val);
+    const hasUppercase  = /[A-Z]/.test(val);
+    const hasSpecial    = /[!@#$%^&*(),.?":{}|<>]/.test(val);
+    const passwordsMatch= (val === confirmVal && confirmVal !== '');
 
-            submitBtn.disabled = !isValid;
-            submitBtn.classList.toggle('opacity-50', !isValid);
-            submitBtn.classList.toggle('opacity-100', isValid);
-        }
+    setIconStatus(reqLength, isLength);
+    setIconStatus(reqNumber, hasNumber);
+    setIconStatus(reqUppercase, hasUppercase);
+    setIconStatus(reqSpecial, hasSpecial);
+    setIconStatus(reqMatch, passwordsMatch);
 
-        password.addEventListener('input', validatePassword);
-        passwordConfirmation.addEventListener('input', validatePassword);
-    </script>
-</body>
-</html>
+    const isValid = isLength && hasNumber && hasUppercase && hasSpecial && passwordsMatch;
+    submitBtn.disabled = !isValid;
+    submitBtn.classList.toggle('opacity-50', !isValid);
+    submitBtn.classList.toggle('opacity-100', isValid);
+}
+
+// Attach event listeners
+password.addEventListener('input', validatePassword);
+passwordConfirm.addEventListener('input', validatePassword);
+
+// Run once on load so icons appear immediately
+validatePassword();
+</script>
+@endpush

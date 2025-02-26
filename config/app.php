@@ -52,7 +52,7 @@ return [
     |
     */
 
-    'url' => env('APP_URL', 'https://backend.thatdisabilityadventurecompany.com.au'),
+    'url' => env('APP_URL', 'https://accounts.thatdisabilityadventurecompany.com.au'),
 
     /*
     |--------------------------------------------------------------------------

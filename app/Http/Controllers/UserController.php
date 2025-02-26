@@ -13,6 +13,7 @@ use Illuminate\Support\Facades\Mail;
 use Postmark\PostmarkClient;
 // Example mailable (you’d create it via php artisan make:mail VerificationEmail)
 use App\Mail\VerificationEmail;
+use Illuminate\Support\Facades\Auth;
 
 class UserController extends Controller
 {
@@ -310,23 +311,20 @@ public function storeSetPassword(Request $request)
 
 public function resendVerification($id)
 {
-    // Check if the logged-in user's ID matches $id
-    if (auth()->id() != $id) {
-        // If you also want to allow master/admin to do it for others, you can add a condition like:
-        // if (auth()->user()->user_type !== 'master')
-        //    abort(403, 'You cannot resend verification for someone else!');
-
-        abort(403, 'You cannot resend verification for someone else!');
-    }
-
     $user = User::findOrFail($id);
 
-    // If the user is already verified, skip or show an error
+    // Compare $user->id, not $targetUser->id
+    if (
+        Auth::id() !== $user->id
+        && !in_array(Auth::user()->user_type, ['master','superadmin','admin'])
+    ) {
+        abort(403, 'You do not have permission to resend this verification.');
+    }
+
     if ($user->email_verified_at) {
         return redirect()->back()->withErrors('User is already verified.');
     }
 
-    // Reuse your verification logic
     $this->sendVerificationEmail($user);
 
     return redirect()->back()->with('status', 'Verification email resent to ' . $user->email);
