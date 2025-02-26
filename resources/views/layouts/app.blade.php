@@ -3,7 +3,7 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Admin Panel | TDAC Australia</title>
+    <title>@yield('title', 'Admin') | TDAC Australia</title>
     <!-- Tailwind CSS via CDN -->
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="//unpkg.com/alpinejs" defer></script>
@@ -31,5 +31,6 @@
         });
       });
     </script>
+@stack('scripts')
 </body>
 </html>

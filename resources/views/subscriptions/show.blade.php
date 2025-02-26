@@ -1,80 +1,67 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <title>{{ ucfirst($listName) }} Subscribers</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-</head>
-<body class="bg-gray-50 min-h-screen flex flex-col">
+@extends('layouts.app')
 
-    @include('partials.header')
-    <div class="flex flex-grow">
-        @include('partials.sidebar')
+@section('title', ucfirst($listName) . ' Subscribers')
 
-        <main class="flex-grow p-6">
-            <h2 class="text-2xl font-semibold mb-4">Subscribers for {{ ucfirst($listName) }}</h2>
+@section('content')
+<h2 class="text-2xl font-semibold mb-4">
+    Subscribers for {{ ucfirst($listName) }}
+</h2>
 
-            @if(session('status'))
-                <div class="text-green-500 mb-4">{{ session('status') }}</div>
-            @endif
+@if(session('status'))
+    <div class="text-green-500 mb-4">{{ session('status') }}</div>
+@endif
 
-            @if($subscribers->isEmpty())
-                <p>No subscribers for this list.</p>
-            @else
-                <table class="w-full bg-white shadow rounded-md overflow-hidden">
-                    <thead class="bg-gray-200">
-                        <tr>
-                            <th class="py-3 px-4 text-left">Name</th>
-                            <th class="py-3 px-4 text-left">Email</th>
-                            <th class="py-3 px-4 text-left">Actions</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        @foreach($subscribers as $sub)
-                            <tr class="border-b hover:bg-gray-100">
-                                <td class="py-3 px-4">
-                                    {{ $sub->user->name ?? 'N/A' }} {{ $sub->user->last_name ?? '' }}
-                                </td>
-                                <td class="py-3 px-4">
-                                    {{ $sub->user->email ?? 'N/A' }}
-                                </td>
-                                <td class="py-3 px-4">
-                                    <!-- We'll reuse your existing unsubscribe route, but adapt it to email-based if needed -->
-                                    <!-- Unsubscribe form -->
-                                    <!-- Unsubscribe form -->
-<form method="POST" action="{{ route('subscriptions.unsubscribe') }}">
-    @csrf
-    <input type="hidden" name="email" value="{{ $sub->user->email }}">
-    <input type="hidden" name="list_name" value="{{ $listName }}">
-    <button class="bg-red-500 text-white px-3 py-1 rounded hover:bg-red-600">
-        Unsubscribe
-    </button>
-</form>
-                                </td>
-                            </tr>
-                        @endforeach
-                    </tbody>
-                </table>
-            @endif
+@if($subscribers->isEmpty())
+    <p>No subscribers for this list.</p>
+@else
+    <table class="w-full bg-white shadow rounded-md overflow-hidden">
+        <thead class="bg-gray-200">
+            <tr>
+                <th class="py-3 px-4 text-left">Name</th>
+                <th class="py-3 px-4 text-left">Email</th>
+                <th class="py-3 px-4 text-left">Actions</th>
+            </tr>
+        </thead>
+        <tbody>
+        @foreach($subscribers as $sub)
+            <tr class="border-b hover:bg-gray-100">
+                <td class="py-3 px-4">
+                    {{ $sub->user->name ?? 'N/A' }} {{ $sub->user->last_name ?? '' }}
+                </td>
+                <td class="py-3 px-4">
+                    {{ $sub->user->email ?? 'N/A' }}
+                </td>
+                <td class="py-3 px-4">
+                    <!-- Unsubscribe form -->
+                    <form method="POST" action="{{ route('subscriptions.unsubscribe') }}">
+                        @csrf
+                        <input type="hidden" name="email" value="{{ $sub->user->email }}">
+                        <input type="hidden" name="list_name" value="{{ $listName }}">
+                        <button class="bg-red-500 text-white px-3 py-1 rounded hover:bg-red-600">
+                            Unsubscribe
+                        </button>
+                    </form>
+                </td>
+            </tr>
+        @endforeach
+        </tbody>
+    </table>
+@endif
 
-            <!-- Subscribe form: uses 'email' since your subscribe method uses email -->
-            <div class="mt-6 bg-white p-4 rounded shadow">
-                <h3 class="text-lg font-semibold mb-2">Subscribe a user to this list:</h3>
-                
 <!-- Subscribe form -->
-<form method="POST" action="{{ route('subscriptions.subscribe') }}">
-    @csrf
-    <input type="hidden" name="list_name" value="{{ $listName }}">
+<div class="mt-6 bg-white p-4 rounded shadow">
+    <h3 class="text-lg font-semibold mb-2">Subscribe a user to this list:</h3>
 
-    <label for="email" class="block text-sm font-medium text-gray-700">User Email:</label>
-    <input type="email" name="email" class="w-full p-2 border rounded" required>
+    <form method="POST" action="{{ route('subscriptions.subscribe') }}">
+        @csrf
+        <input type="hidden" name="list_name" value="{{ $listName }}">
 
-    <button class="bg-indigo-500 text-white px-4 py-2 rounded hover:bg-indigo-600 mt-2">
-        Subscribe User
-    </button>
-</form>
-            </div>
-        </main>
-    </div>
-</body>
-</html>
+        <label for="email" class="block text-sm font-medium text-gray-700">User Email:</label>
+        <input type="email" name="email" class="w-full p-2 border rounded" required>
+
+        <button class="bg-indigo-500 text-white px-4 py-2 rounded hover:bg-indigo-600 mt-2">
+            Subscribe User
+        </button>
+    </form>
+</div>
+@endsection
