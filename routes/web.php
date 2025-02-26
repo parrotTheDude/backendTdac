@@ -7,6 +7,8 @@ use App\Http\Controllers\SubscriptionController;
 use App\Http\Controllers\NewListController;
 use App\Http\Controllers\BulkEmailController;
 use Illuminate\Support\Facades\Route;
+use App\Http\Controllers\EventController;
+use App\Http\Controllers\ProfileController;
 
 // EVERYTHING on "backend.thatdisabilityadventurecompany.com.au"
 Route::group([
@@ -52,6 +54,10 @@ Route::group([
     Route::get('/home', [AuthController::class, 'home'])
          ->middleware('auth')
          ->name('home');
+         
+    Route::post('/profile/updatename', [ProfileController::class, 'updateName'])
+    ->name('profile.updateName')
+    ->middleware('auth');
 
     /*
     |--------------------------------------------------------------------------
@@ -100,6 +106,9 @@ Route::group([
                 Route::get('/subscriber-count/{listName}', [BulkEmailController::class, 'subscriberCount'])->name('bulk-emails.subscriber-count');
                 Route::get('/templates', [BulkEmailController::class, 'fetchTemplates'])->name('bulk-emails.templates');
             });
+            
+            // Events
+            Route::resource('events', EventController::class);
 
         });
     });
