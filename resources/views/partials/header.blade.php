@@ -66,11 +66,17 @@
         class="absolute top-full right-0 mt-2 w-40 bg-white border border-gray-200 shadow-md rounded py-2 z-50"
     >
         <!-- Profile Link -->
-        <a href="#"
-           class="flex items-center space-x-2 px-3 py-2 hover:bg-gray-100 text-gray-700">
-            <img src="{{ asset('assets/icons/settings.svg') }}" alt="Settings" class="w-4 h-4">
-            <span>Profile</span>
-        </a>
+            <a 
+                href="{{ route('profile.index') }}" 
+                class="flex items-center space-x-2 px-3 py-2 hover:bg-gray-100 text-gray-700"
+            >
+                <img 
+                    src="{{ asset('assets/icons/settings.svg') }}" 
+                    alt="Settings Icon" 
+                    class="w-4 h-4"
+                >
+                <span>My Profile</span>
+            </a>
 
         <!-- Divider -->
         <div class="border-t border-gray-200 my-1"></div>

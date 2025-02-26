@@ -9,6 +9,8 @@ use App\Http\Controllers\NewListController;
 use App\Http\Controllers\BulkEmailController;
 use App\Http\Controllers\EventController;
 use App\Http\Controllers\ProfileController;
+use App\Http\Controllers\SettingsController;
+use App\Http\Controllers\BookingsController;
 
 Route::group([
     'domain' => 'accounts.thatdisabilityadventurecompany.com.au',
@@ -60,6 +62,12 @@ Route::group([
     Route::get('/{id}/resend-verification', [UserController::class, 'resendVerification'])
          ->middleware('auth')
          ->name('users.resendVerification');
+         
+         
+Route::middleware('auth')->group(function () {
+    Route::get('/profile', [ProfileController::class, 'index'])->name('profile.index');
+    Route::post('/profile', [ProfileController::class, 'update'])->name('profile.update');
+});
 
     /*
     |--------------------------------------------------------------------------
@@ -108,6 +116,15 @@ Route::group([
 
             // 4) Events
             Route::resource('events', EventController::class);
+            
+            Route::prefix('settings')->group(function () {
+    Route::get('/schedule-pages', [SettingsController::class, 'schedulePages'])
+         ->name('settings.schedulePages');
+});
+
+
+Route::get('/bookings', [BookingsController::class, 'index'])
+     ->name('bookings.index');
 
         });
     });
