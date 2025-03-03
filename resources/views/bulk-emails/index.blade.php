@@ -91,8 +91,8 @@
                 </div>
             </div>
 
-            <button type="submit"
-                    class="bg-indigo-500 text-white px-6 py-2 rounded hover:bg-indigo-600 transition">
+            <button type="submit" id="sendEmailButton"
+                class="bg-indigo-500 text-white px-6 py-2 rounded hover:bg-indigo-600 transition">
                 Send Bulk Email
             </button>
         </form>
@@ -141,8 +141,11 @@
                         @endforeach
                     </td>
                     <td class="py-3 px-4">
-                        {{ $email->emails_sent }}
-                    </td>
+    <span class="px-2 py-1 rounded text-white 
+        {{ $email->emails_sent == 0 ? 'bg-red-500' : ($email->emails_sent < 10 ? 'bg-yellow-500' : 'bg-green-500') }}">
+        {{ $email->emails_sent }}
+    </span>
+</td>
                     <td class="py-3 px-4">
                         <pre class="text-xs">
 {{ json_encode(json_decode($email->variables), JSON_PRETTY_PRINT) }}
@@ -211,27 +214,34 @@ document.addEventListener('DOMContentLoaded', function () {
 
     // Confirm + reload logic
     form.addEventListener('submit', function(e) {
-        e.preventDefault();
-        if (!confirm('Are you sure you want to send this bulk email?')) return;
+    e.preventDefault();
+    if (!confirm('Are you sure you want to send this bulk email?')) return;
 
-        const formData = new FormData(this);
+    const formData = new FormData(this);
+    const sendButton = document.getElementById('sendEmailButton');
 
-        fetch('{{ route('bulk-emails.send') }}', {
-            method: 'POST',
-            headers: { 'X-CSRF-TOKEN': '{{ csrf_token() }}' },
-            body: formData
-        })
-        .then(res => res.json())
-        .then(data => {
-            const id = data.bulk_email_id;
-            const total = data.total || 0;
-            window.location.href = '?bulk_email_id=' + id + '&total=' + total;
-        })
-        .catch(err => {
-            alert('Error sending bulk email.');
-            console.error(err);
-        });
+    // Disable button and show loading state
+    sendButton.disabled = true;
+    sendButton.innerText = 'Sending...';
+
+    fetch('{{ route('bulk-emails.send') }}', {
+        method: 'POST',
+        headers: { 'X-CSRF-TOKEN': '{{ csrf_token() }}' },
+        body: formData
+    })
+    .then(res => res.json())
+    .then(data => {
+        const id = data.bulk_email_id;
+        const total = data.total || 0;
+        window.location.href = '?bulk_email_id=' + id + '&total=' + total;
+    })
+    .catch(err => {
+        alert('Error sending bulk email.');
+        console.error(err);
+        sendButton.disabled = false;
+        sendButton.innerText = 'Send Bulk Email';
     });
+});
 
     // If we have a bulk_email_id, start polling progress
     const urlParams       = new URLSearchParams(window.location.search);
@@ -273,14 +283,21 @@ document.addEventListener('DOMContentLoaded', function () {
         }, 2000);
 
         function finish() {
-            clearInterval(interval);
-            // Turn the box green
-            sendingBox.classList.remove('bg-blue-100', 'border-blue-300');
-            sendingBox.classList.add('bg-green-100', 'border-green-300');
-            sendingStatus.classList.remove('text-blue-700');
-            sendingStatus.classList.add('text-green-700');
-            sendingStatus.textContent = 'Email sending complete!';
-        }
+    clearInterval(interval);
+
+    // Turn the box green
+    sendingBox.classList.remove('bg-blue-100', 'border-blue-300');
+    sendingBox.classList.add('bg-green-100', 'border-green-300');
+    sendingStatus.classList.remove('text-blue-700');
+    sendingStatus.classList.add('text-green-700');
+    sendingStatus.textContent = 'Email sending complete!';
+
+    // Fade out the progress bar
+    setTimeout(() => {
+        sendingBox.style.opacity = '0';
+        setTimeout(() => sendingBox.style.display = 'none', 500);
+    }, 3000);
+}
     }
 });
 </script>

@@ -1,100 +1,79 @@
 <?php
 
 use Illuminate\Support\Facades\Route;
-use App\Http\Controllers\AuthController;
-use App\Http\Controllers\PasswordResetController;
-use App\Http\Controllers\UserController;
-use App\Http\Controllers\SubscriptionController;
-use App\Http\Controllers\NewListController;
-use App\Http\Controllers\BulkEmailController;
-use App\Http\Controllers\EventController;
-use App\Http\Controllers\ProfileController;
-use App\Http\Controllers\SettingsController;
-use App\Http\Controllers\BookingsController;
+use App\Http\Controllers\{
+    AuthController, PasswordResetController, UserController, SubscriptionController,
+    NewListController, BulkEmailController, EventController, ProfileController,
+    SettingsController, BookingsController
+};
 
-Route::group([
-    'domain' => 'accounts.thatdisabilityadventurecompany.com.au',
-], function () {
-
+Route::group(['domain' => 'accounts.thatdisabilityadventurecompany.com.au'], function () {
     /*
     |--------------------------------------------------------------------------
     | Public (Unauthenticated) Auth Routes
     |--------------------------------------------------------------------------
     */
-    Route::get('/', [AuthController::class, 'showLoginForm'])->name('login');      // GET /
-    Route::post('/', [AuthController::class, 'login'])->name('login.submit');     // POST /
+    Route::get('/', [AuthController::class, 'showLoginForm'])->name('login');
+    Route::post('/', [AuthController::class, 'login'])->name('login.submit');
 
     // Password Reset
-    Route::get('/forgot-password', [PasswordResetController::class, 'showForgotPasswordForm'])
-         ->name('password.request');
-    Route::post('/forgot-password', [PasswordResetController::class, 'sendResetLink'])
-         ->name('password.email');
-    Route::get('/reset-password/{token}', [PasswordResetController::class, 'showResetForm'])
-         ->name('password.reset');
-    Route::post('/reset-password', [PasswordResetController::class, 'resetPassword'])
-         ->name('password.update');
+    Route::prefix('password')->group(function () {
+        Route::get('/forgot', [PasswordResetController::class, 'showForgotPasswordForm'])->name('password.request');
+        Route::post('/forgot', [PasswordResetController::class, 'sendResetLink'])->name('password.email');
+        Route::get('/reset/{token}', [PasswordResetController::class, 'showResetForm'])->name('password.reset');
+        Route::post('/reset', [PasswordResetController::class, 'resetPassword'])->name('password.update');
+    });
 
-    // Verify & Set Password (brand-new users)
-    Route::get('/verify-and-set-password/{token}', [AuthController::class, 'showSetPasswordForm'])
-         ->name('verify.setPassword');
-    Route::post('/verify-and-set-password', [AuthController::class, 'storeSetPassword'])
-         ->name('verify.savePassword');
+    // Verify & Set Password
+    Route::prefix('verify-and-set-password')->group(function () {
+        Route::get('/{token}', [AuthController::class, 'showSetPasswordForm'])->name('verify.setPassword');
+        Route::post('/', [AuthController::class, 'storeSetPassword'])->name('verify.savePassword');
+    });
 
     /*
     |--------------------------------------------------------------------------
     | Authenticated User Routes
     |--------------------------------------------------------------------------
     */
-    Route::post('/logout', [AuthController::class, 'logout'])
-         ->middleware('auth')
-         ->name('logout');
+    Route::middleware('auth')->group(function () {
+        Route::post('/logout', [AuthController::class, 'logout'])->name('logout');
+        Route::get('/home', function () { return view('home'); })->name('home');
+        
+        // Profile Management
+        Route::prefix('profile')->group(function () {
+            Route::get('/update-name', [ProfileController::class, 'updateNameForm'])->name('profile.updateName');
+            Route::post('/update-name', [ProfileController::class, 'updateName'])->name('profile.saveName');
+            Route::get('/', [ProfileController::class, 'index'])->name('profile.index');
+            Route::post('/', [ProfileController::class, 'update'])->name('profile.update');
+        });
+    });
 
-    Route::get('/home', [AuthController::class, 'home'])
-         ->middleware('auth')
-         ->name('home');
-
-    // Update name (for incomplete user profiles)
-    Route::post('/profile/updatename', [ProfileController::class, 'updateName'])
-         ->middleware('auth')
-         ->name('profile.updateName');
-
-    // Resend verification link (only if user is logged in)
-    Route::get('/{id}/resend-verification', [UserController::class, 'resendVerification'])
-         ->middleware('auth')
-         ->name('users.resendVerification');
-         
-         
-Route::middleware('auth')->group(function () {
-    Route::get('/profile', [ProfileController::class, 'index'])->name('profile.index');
-    Route::post('/profile', [ProfileController::class, 'update'])->name('profile.update');
-});
+    // Verification & Reset Link
+    Route::middleware('auth')->group(function () {
+        Route::get('/{id}/resend-verification', [UserController::class, 'resendVerification'])->name('users.resendVerification');
+        Route::post('/send-reset-link', [PasswordResetController::class, 'sendResetLink'])->name('password.sendResetLink');
+    });
 
     /*
     |--------------------------------------------------------------------------
     | Admin / Master-Only Routes
     |--------------------------------------------------------------------------
-    | Protect these with 'auth' plus a gate or role check, e.g. 'can:access-backend'.
-    | Alternatively, if you have a custom 'master' or 'superadmin' middleware, use that.
     */
-    Route::group(['middleware' => ['auth','can:access-backend']], function () {
-
+    Route::middleware(['auth', 'can:access-backend'])->group(function () {
         Route::prefix('dashboard')->group(function () {
+            Route::get('/', function () { return view('dashboard'); })->name('dashboard');
 
-            // Main admin dashboard
-            Route::get('/', function () {
-                return view('dashboard');
-            })->name('dashboard');
-
-            // 1) User Management
+            // User Management
             Route::prefix('users')->group(function () {
                 Route::get('/', [UserController::class, 'index'])->name('users.index');
                 Route::get('/new-user', [UserController::class, 'create'])->name('users.create');
                 Route::post('/', [UserController::class, 'store'])->name('users.store');
                 Route::get('/{id}', [UserController::class, 'show'])->name('users.show');
                 Route::post('/{id}', [UserController::class, 'update'])->name('users.update');
+                Route::get('/export', [UserController::class, 'export'])->name('users.export');
             });
 
-            // 2) Subscription Management
+            // Subscription Management
             Route::prefix('subscriptions')->group(function () {
                 Route::get('/', [SubscriptionController::class, 'listIndex'])->name('subscriptions.index');
                 Route::post('/subscribe', [SubscriptionController::class, 'subscribe'])->name('subscriptions.subscribe');
@@ -104,7 +83,7 @@ Route::middleware('auth')->group(function () {
                 Route::get('/{listName}', [SubscriptionController::class, 'listShow'])->name('subscriptions.show');
             });
 
-            // 3) Bulk Email
+            // Bulk Email
             Route::prefix('bulk-emails')->group(function () {
                 Route::get('/', [BulkEmailController::class, 'index'])->name('bulk-emails.index');
                 Route::post('/send', [BulkEmailController::class, 'send'])->name('bulk-emails.send');
@@ -114,18 +93,17 @@ Route::middleware('auth')->group(function () {
                 Route::get('/templates', [BulkEmailController::class, 'fetchTemplates'])->name('bulk-emails.templates');
             });
 
-            // 4) Events
+            // Events
             Route::resource('events', EventController::class);
-            
+
+            // Settings
             Route::prefix('settings')->group(function () {
-    Route::get('/schedule-pages', [SettingsController::class, 'schedulePages'])
-         ->name('settings.schedulePages');
-});
+                Route::get('/schedule-pages', [SettingsController::class, 'schedulePages'])->name('settings.schedulePages');
+            });
 
-
-Route::get('/bookings', [BookingsController::class, 'index'])
-     ->name('bookings.index');
-
+            // Bookings
+            Route::get('/bookings', [BookingsController::class, 'index'])->name('bookings.index');
         });
     });
 });
+

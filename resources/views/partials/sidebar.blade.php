@@ -21,9 +21,8 @@
             </a>
         </li>
 
-        <!-- 2) Events (Dropdown) -->
-        <li x-data="{ open: false }" class="relative">
-            <!-- Trigger button -->
+        <!-- 2) Events (Disabled) -->
+        <!--<li x-data="{ open: false }" class="relative">
             <button
                 @click="open = !open"
                 class="w-full flex items-center justify-between space-x-2 px-2 py-2 rounded
@@ -34,7 +33,6 @@
                     <img src="{{ asset('assets/icons/calendar.svg') }}" alt="Calendar Icon" class="w-5 h-5">
                     <span>Events</span>
                 </div>
-                <!-- Chevron -->
                 <svg x-show="!open" xmlns="http://www.w3.org/2000/svg"
                      class="h-4 w-4 text-gray-600" fill="none"
                      viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
@@ -48,8 +46,10 @@
                         d="M5 15l7-7 7 7" />
                 </svg>
             </button>
+            -->
 
             <!-- Dropdown content -->
+            <!--
             <div
                 x-show="open"
                 x-transition:enter="transition ease-out duration-200"
@@ -61,7 +61,7 @@
                 class="mt-1 ml-6 space-y-1"
                 @click.away="open = false"
             >
-                <!-- Example sub-links -->
+            
                 <a href="{{ route('events.index') }}"
                    class="block px-2 py-2 rounded
                    {{ request()->routeIs('events.index') ? 'bg-indigo-100 text-indigo-600' : 'text-gray-700 hover:bg-gray-100' }}">
@@ -78,16 +78,19 @@
                 </a>
             </div>
         </li>
+        -->
 
-        <!-- 3) Bookings -->
-<li>
-    <a href="{{ route('bookings.index') }}"
-       class="flex items-center space-x-2 px-2 py-2 rounded
+        <!-- 3) Bookings (Disabled) -->
+        <!--
+        <li>
+            <a href="{{ route('bookings.index') }}"
+            class="flex items-center space-x-2 px-2 py-2 rounded
               {{ request()->routeIs('bookings.*') ? 'bg-indigo-100 text-indigo-600' : 'text-gray-700 hover:bg-gray-100' }}">
-        <img src="{{ asset('assets/icons/ticket.svg') }}" alt="Ticket Icon" class="w-5 h-5">
-        <span>Bookings</span>
-    </a>
-</li>
+                <img src="{{ asset('assets/icons/ticket.svg') }}" alt="Ticket Icon" class="w-5 h-5">
+                <span>Bookings</span>
+            </a>
+        </li>
+        -->
 
         <!-- 4) Users -->
         <li>

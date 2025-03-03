@@ -14,6 +14,8 @@ use Postmark\PostmarkClient;
 // Example mailable (you’d create it via php artisan make:mail VerificationEmail)
 use App\Mail\VerificationEmail;
 use Illuminate\Support\Facades\Auth;
+use Maatwebsite\Excel\Facades\Excel;
+use App\Exports\UsersExport;
 
 class UserController extends Controller
 {
@@ -24,15 +26,29 @@ class UserController extends Controller
 
         $query = User::query();
 
-        // Existing search logic
-        if ($search = $request->input('search')) {
-            $query->where(function ($q) use ($search) {
-                $q->where('name', 'like', "%{$search}%")
-                  ->orWhere('last_name', 'like', "%{$search}%")
-                  ->orWhere('email', 'like', "%{$search}%")
-                  ->orWhere('user_type', 'like', "%{$search}%");
-            });
+        // Existing search logic with 'master' exclusion
+if ($search = $request->input('search')) {
+    $query->where(function ($q) use ($search) {
+        $q->where('name', 'like', "%{$search}%")
+          ->orWhere('last_name', 'like', "%{$search}%")
+          ->orWhere('email', 'like', "%{$search}%")
+          ->orWhere('user_type', 'like', "%{$search}%");
+    });
+
+    // Exclude 'master' from participant-related searches
+    $query->where('user_type', '!=', 'master');
+}
+        
+         // Apply user type filters
+    if ($request->has('filter')) {
+        if ($request->filter === 'participants') {
+            $query->whereIn('user_type', ['participant', 'parent']);
+        } elseif ($request->filter === 'external') {
+            $query->where('user_type', 'external');
+        } elseif ($request->filter === 'staff') {
+            $query->whereIn('user_type', ['admin', 'superadmin']);
         }
+    }
 
         // Allowed sorts
         $allowedSorts = ['name', 'last_name', 'email', 'user_type', 'gender'];
@@ -53,116 +69,156 @@ class UserController extends Controller
         ]);
     }
     
-    public function create()
-    {
-        $userTypes = User::whereNotNull('user_type')
-                         ->distinct()
-                         ->pluck('user_type')
-                         ->filter(function ($type) {
-                             return strtolower($type) !== 'master';
-                         });
+    public function export(Request $request)
+{
+    return Excel::download(new UsersExport($request), 'users.csv');
+}
+    
+public function create()
+{
+    $userTypes = User::whereNotNull('user_type')
+                     ->distinct()
+                     ->pluck('user_type')
+                     ->filter(function ($type) {
+                         return strtolower($type) !== 'master';
+                     });
 
-        $genders = User::whereNotNull('gender')
-                       ->distinct()
-                       ->pluck('gender');
+    $genders = User::whereNotNull('gender')
+                   ->distinct()
+                   ->pluck('gender');
 
-        return view('users.create', compact('userTypes', 'genders'));
-    }
+    // Fetch all available subscription lists
+    $subscriptionLists = Subscription::distinct()->pluck('list_name');
+
+    return view('users.create', compact('userTypes', 'genders', 'subscriptionLists'));
+}
 
     /**
      * Store a newly created user WITHOUT a password,
      * then send them a verification email to set their password.
      */
     public function store(Request $request)
-    {
-        // Remove 'password' from validation since we'll do it via verification link
-        $request->validate([
-            'email' => 'required|email|unique:users,email',
-            'name' => 'required|string|max:255',
-            'last_name' => 'required|string|max:255',
-            'user_type' => 'required|string|max:50',
-            'gender' => 'nullable|string|max:10',
-        ]);
+{
+    // Validate request
+    $request->validate([
+        'email' => 'required|email|unique:users,email',
+        'name' => 'nullable|string|max:255', // Changed to nullable
+        'last_name' => 'nullable|string|max:255', // Changed to nullable
+        'user_type' => 'required|string|max:50',
+        'gender' => 'nullable|string|max:10',
+        'subscriptions' => 'array', // Ensure it's an array
+    ]);
 
-        // Create user
-        $data = [
-        'name'       => $request->name,
-        'last_name'  => $request->last_name,
+    // Create user
+    $data = [
+        'name'       => $request->name ?? null, // Ensure null is saved if empty
+        'last_name'  => $request->last_name ?? null, // Ensure null is saved if empty
         'email'      => $request->email,
         'user_type'  => strtolower($request->input('user_type')),
-        'gender'     => $request->filled('gender')
-                        ? strtolower($request->input('gender'))
-                        : null,
-        ];
+        'gender'     => $request->filled('gender') ? strtolower($request->input('gender')) : null,
+    ];
 
-        // Create the user
-        $user = User::create($data);
+    // Save user
+    $user = User::create($data);
 
-        // 1) Send verification link so they can confirm email & set password
-        $this->sendVerificationEmail($user);
+    // Send verification email
+    $this->sendVerificationEmail($user);
 
-        // 2) Optionally auto-subscribe based on user_type or gender
-        //$this->autoSubscribeByTypeAndGender($user);
+    // Save subscriptions
+    $selectedSubscriptions = $request->input('subscriptions', []);
+    foreach ($selectedSubscriptions as $subscription) {
+        Subscription::create([
+            'user_id' => $user->id,
+            'list_name' => $subscription,
+            'subscribed' => true,
+        ]);
+    }
 
-        return redirect()
+    return redirect()
         ->route('users.create')
         ->with('newUserCreated', [
-            'name'      => $user->name,
-            'last_name' => $user->last_name,
+            'name'      => $user->name ?? 'N/A',
+            'last_name' => $user->last_name ?? '',
             'email'     => $user->email,
             'id'        => $user->id,
         ]);
-    }
+}
+    
+    
 
     public function show($id, Request $request)
-    {
-        $user = User::findOrFail($id);
+{
+    $user = User::findOrFail($id);
 
-        $userTypes = User::whereNotNull('user_type')
-                         ->distinct()
-                         ->pluck('user_type')
-                         ->filter(fn($type) => strtolower($type) !== 'master');
+    $userTypes = User::whereNotNull('user_type')
+                     ->distinct()
+                     ->pluck('user_type')
+                     ->filter(fn($type) => strtolower($type) !== 'master');
 
-        $genders = User::whereNotNull('gender')
-                       ->distinct()
-                       ->pluck('gender');
+    $genders = User::whereNotNull('gender')
+                   ->distinct()
+                   ->pluck('gender');
 
-        if ($request->wantsJson()) {
-            return response()->json($user);
-        }
+    // Fetch all available subscription lists
+    $subscriptionLists = Subscription::distinct()->pluck('list_name');
 
-        return view('users.show', compact('user', 'userTypes', 'genders'));
+    // Fetch user's current subscriptions (only where subscribed = true)
+    $userSubscriptions = Subscription::where('user_id', $user->id)
+                                     ->where('subscribed', true)
+                                     ->pluck('list_name')
+                                     ->toArray();
+
+    if ($request->wantsJson()) {
+        return response()->json($user);
     }
+
+    return view('users.show', compact('user', 'userTypes', 'genders', 'subscriptionLists', 'userSubscriptions'));
+}
 
     public function update(Request $request, $id)
-    {
-        $user = User::findOrFail($id);
+{
+    $user = User::findOrFail($id);
 
-        $request->validate([
-            'email' => 'email|unique:users,email,' . $id,
-            'name' => 'nullable|string|max:255',
-            'last_name' => 'nullable|string|max:255',
-            'user_type' => 'string|max:50',
-            'gender' => 'nullable|string|max:10',
-            'password' => 'nullable|min:6',
-        ]);
+    $request->validate([
+        'email' => 'email|unique:users,email,' . $id,
+        'name' => 'nullable|string|max:255',
+        'last_name' => 'nullable|string|max:255',
+        'user_type' => 'string|max:50',
+        'gender' => 'nullable|string|max:10',
+        'password' => 'nullable|min:6',
+        'subscriptions' => 'array',
+    ]);
 
-        $data = $request->only(['name', 'last_name', 'email']);
+    $data = $request->only(['name', 'last_name', 'email']);
 
-        if ($request->filled('password')) {
-            $data['password'] = Hash::make($request->password);
-        }
-
-        $data['user_type'] = strtolower($request->input('user_type'));
-        $data['gender']    = $request->filled('gender')
-            ? strtolower($request->input('gender'))
-            : null;
-
-        $user->update($data);
-
-        return redirect()->route('users.show', $user->id)
-                         ->with('status', 'User updated successfully!');
+    if ($request->filled('password')) {
+        $data['password'] = Hash::make($request->password);
     }
+
+    $data['user_type'] = strtolower($request->input('user_type'));
+    $data['gender']    = $request->filled('gender') ? strtolower($request->input('gender')) : null;
+
+    $user->update($data);
+
+    // Update subscriptions
+    $selectedSubscriptions = $request->input('subscriptions', []);
+
+    // Remove any subscriptions not in the new list
+    Subscription::where('user_id', $user->id)
+        ->whereNotIn('list_name', $selectedSubscriptions)
+        ->delete();
+
+    // Add or update subscriptions
+    foreach ($selectedSubscriptions as $subscription) {
+        Subscription::updateOrCreate(
+            ['user_id' => $user->id, 'list_name' => $subscription],
+            ['subscribed' => true] // Ensure it remains active
+        );
+    }
+
+    return redirect()->route('users.show', $user->id)
+                     ->with('status', 'User updated successfully!');
+}
 
     public function destroy($id)
     {

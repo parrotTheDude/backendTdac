@@ -7,6 +7,12 @@
     Subscribers for {{ ucfirst($listName) }}
 </h2>
 
+<div class="flex items-center mb-4 space-x-2">
+    <input type="text" id="searchInput" 
+           class="px-3 py-2 border rounded-md shadow-sm focus:outline-none w-1/3"
+           placeholder="Search subscribers...">
+</div>
+
 @if(session('status'))
     <div class="text-green-500 mb-4">{{ session('status') }}</div>
 @endif
@@ -64,4 +70,15 @@
         </button>
     </form>
 </div>
+
+<script>
+    document.getElementById('searchInput').addEventListener('input', function() {
+        let filter = this.value.toLowerCase();
+        document.querySelectorAll('tbody tr').forEach(row => {
+            let name = row.children[0].innerText.toLowerCase();
+            let email = row.children[1].innerText.toLowerCase();
+            row.style.display = (name.includes(filter) || email.includes(filter)) ? '' : 'none';
+        });
+    });
+</script>
 @endsection

@@ -15,11 +15,17 @@
     @php
         $created = session('newUserCreated');
     @endphp
-    <div class="bg-green-100 border-l-4 border-green-500 text-green-700 p-4 rounded mb-6" role="alert">
+    <div id="successMessage" class="bg-green-100 border-l-4 border-green-500 text-green-700 p-4 rounded mb-6" role="alert">
         <p class="font-bold">User Created Successfully!</p>
-        <p class="mt-1">Name: {{ $created['name'] }} {{ $created['last_name'] }}</p>
+        <p class="mt-1">Name: {{ $created['name'] ?? 'N/A' }} {{ $created['last_name'] ?? '' }}</p>
         <p>Email: {{ $created['email'] }}</p>
     </div>
+
+    <script>
+        setTimeout(function() {
+            document.getElementById('successMessage').style.display = 'none';
+        }, 5000);
+    </script>
 @endif
 
 @if(session('status'))
@@ -29,6 +35,13 @@
 @endif
 
 @if($errors->any())
+    <script>
+        document.addEventListener("DOMContentLoaded", function() {
+            @foreach($errors->keys() as $errorField)
+                document.querySelector("[name='{{ $errorField }}']").classList.add("border-red-500");
+            @endforeach
+        });
+    </script>
     <div class="mb-4 text-red-500">
         <ul>
             @foreach($errors->all() as $error)
@@ -42,19 +55,20 @@
     @csrf
 
     <div class="grid grid-cols-2 gap-4">
-        <input 
+       <input 
             name="name" 
             type="text" 
-            placeholder="First Name" 
+            placeholder="First Name (Optional)" 
             class="px-3 py-2 border rounded-md"
-            required
+            oninput="this.value = this.value.charAt(0).toUpperCase() + this.value.slice(1).toLowerCase();"
         >
+
         <input 
             name="last_name" 
             type="text" 
-            placeholder="Last Name" 
+            placeholder="Last Name (Optional)" 
             class="px-3 py-2 border rounded-md"
-            required
+            oninput="this.value = this.value.charAt(0).toUpperCase() + this.value.slice(1).toLowerCase();"
         >
     </div>
 
@@ -90,9 +104,22 @@
         </select>
     </div>
 
+    <!-- Subscription Lists -->
+    <div class="mt-6">
+        <h3 class="text-lg font-semibold mb-2">Subscription Lists</h3>
+        @foreach($subscriptionLists as $list)
+            <div class="flex items-center mb-2">
+                <input type="checkbox" name="subscriptions[]" value="{{ $list }}" id="sub_{{ $list }}" 
+                    class="mr-2">
+                <label for="sub_{{ $list }}">{{ $list }}</label>
+            </div>
+        @endforeach
+    </div>
+
     <button 
         type="submit"
         class="bg-indigo-500 text-white px-4 py-2 rounded-md mt-4 hover:bg-indigo-600 transition"
+        onclick="this.disabled = true; this.innerText = 'Creating...'; this.form.submit();"
     >
         Create User
     </button>

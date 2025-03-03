@@ -26,24 +26,27 @@ public function login(Request $request)
     ]);
 
     // Grab credentials
-    $credentials = $request->only('email','password');
+    $credentials = $request->only('email', 'password');
 
-    // The second parameter is "remember" => pass true/false
-    // e.g. $request->boolean('remember') if you want a strict bool
-    $remember = $request->filled('remember'); 
-      // or $request->boolean('remember')
+    // Remember me functionality
+    $remember = $request->filled('remember');
 
-    // Attempt to log in using these credentials + remember token
+    // Attempt login
     if (Auth::attempt($credentials, $remember)) {
-        // SUCCESS: user is logged in
-        // 'remember' => true means a long-lived cookie is set
-        return redirect()->intended('dashboard')->with('status', 'Welcome back!');
-    } else {
-        // FAIL
-        return back()->withErrors([
-            'email' => 'Invalid credentials.',
-        ]);
+        $user = Auth::user();
+
+        // Redirect based on user role
+        if ($user->can('access-backend')) {
+            return redirect()->intended('/dashboard')->with('status', 'Welcome back, Admin!');
+        }
+
+        return redirect()->intended('/home')->with('status', 'Welcome back!');
     }
+
+    // If login fails
+    return back()->withErrors([
+        'email' => 'Invalid credentials.',
+    ]);
 }
 
 public function home()

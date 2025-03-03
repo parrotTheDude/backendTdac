@@ -49,20 +49,25 @@ class ProfileController extends Controller
     }
     
     public function updateName(Request $request)
-    {
-        $request->validate([
-            'name' => 'required|max:255',
-            'last_name' => 'required|max:255',
-        ]);
-        
-        $first = ucwords(strtolower($request->name));
-        $last  = ucwords(strtolower($request->last_name));
+{
+    $request->validate([
+        'name' => 'required|max:255',
+        'last_name' => 'required|max:255',
+    ]);
 
-        $user = Auth::user();
-        $user->name = $request->name;
-        $user->last_name = $request->last_name;
-        $user->save();
+    $first = ucwords(strtolower($request->name));
+    $last  = ucwords(strtolower($request->last_name));
 
+    $user = Auth::user();
+    $user->name = $first;
+    $user->last_name = $last;
+    $user->save();
+
+    // Redirect based on user type
+    if ($user->can('access-backend')) {
         return redirect()->route('dashboard')->with('status', 'Name updated successfully!');
     }
+
+    return redirect()->route('home')->with('status', 'Name updated successfully!');
+}
 }

@@ -6,6 +6,8 @@ use App\Http\Controllers\SubscriptionController;
 use App\Http\Controllers\NewsletterController;
 use App\Http\Controllers\UserController;
 use App\Http\Controllers\CalendarReleaseController;
+use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Log;
 
 // Force Laravel to load the file
 require_once app_path('Http/Controllers/SubscriptionController.php');
@@ -26,7 +28,31 @@ Route::middleware('api')->group(function () {
     Route::post('/unsubscribe', [SubscriptionController::class, 'unsubscribe']);
 });
 
-// Other authenticated routes
-Route::middleware(['auth:sanctum'])->get('/user', function (Request $request) {
-    return $request->user();
+// BeeFree Webhook to Postmark
+Route::post('/beefree/webhook', function (Request $request) {
+    Log::info('BeeFree Webhook Data:', $request->all());
+
+    $templateName = $request->input('name') ?? 'Default Template';
+    $htmlBody = $request->input('html');
+
+    if (!$htmlBody) {
+        return response()->json(['error' => 'Invalid data received'], 400);
+    }
+
+    // Make the API request using Laravel's HTTP client
+    $response = Http::withHeaders([
+        'X-Postmark-Server-Token' => config('services.postmark.token'),
+        'Content-Type' => 'application/json',
+    ])->post('https://api.postmarkapp.com/templates', [
+        'Name' => $templateName,
+        'Subject' => '{{subject}}',
+        'HtmlBody' => $htmlBody,
+        'TextBody' => strip_tags($htmlBody),
+        'TemplateType' => 'standard',
+    ]);
+
+    // Log the Postmark response
+    Log::info('Postmark Response:', $response->json());
+
+    return response()->json($response->json(), $response->status());
 });
