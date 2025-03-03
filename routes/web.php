@@ -4,7 +4,7 @@ use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\{
     AuthController, PasswordResetController, UserController, SubscriptionController,
     NewListController, BulkEmailController, EventController, ProfileController,
-    SettingsController, BookingsController
+    SettingsController, BookingsController, WebhookController
 };
 
 Route::group(['domain' => 'accounts.thatdisabilityadventurecompany.com.au'], function () {
@@ -29,6 +29,11 @@ Route::group(['domain' => 'accounts.thatdisabilityadventurecompany.com.au'], fun
         Route::get('/{token}', [AuthController::class, 'showSetPasswordForm'])->name('verify.setPassword');
         Route::post('/', [AuthController::class, 'storeSetPassword'])->name('verify.savePassword');
     });
+    
+    // Subscribe and unsubscribe
+    Route::post('/webhook/subscription-change', [WebhookController::class, 'handleSubscriptionChange'])
+     ->withoutMiddleware([\App\Http\Middleware\VerifyCsrfToken::class])
+     ->name('webhook.subscriptionChange');
 
     /*
     |--------------------------------------------------------------------------
