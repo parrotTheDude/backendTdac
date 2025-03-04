@@ -7,11 +7,20 @@
     $user = Auth::user();
     // Check if either field is empty
     $isIncomplete = empty($user->name) || empty($user->last_name);
+    // Define the specific email to check
+    $specialEmail = 'cody@tdacvic.com'; // Change this to the target email
 @endphp
 
-<h2 class="text-2xl font-semibold mb-4">
+@if($user->email === $specialEmail)
+    <h2 class="text-2xl font-semibold mb-4">
+    LFG, {{ $user->name ?: 'Friend' }}! 🚀
+</h2>
+@else
+    <h2 class="text-2xl font-semibold mb-4">
     Welcome, {{ $user->name ?: 'Friend' }}!
 </h2>
+@endif
+
 <p class="text-gray-600">
     Let's get started! Choose an item on the sidebar to jump in.
 </p>

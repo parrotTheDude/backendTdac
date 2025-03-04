@@ -4,7 +4,7 @@ use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\{
     AuthController, PasswordResetController, UserController, SubscriptionController,
     NewListController, BulkEmailController, EventController, ProfileController,
-    SettingsController, BookingsController, WebhookController
+    SettingsController, BookingsController, WebhookController, ContactController
 };
 
 Route::group(['domain' => 'accounts.thatdisabilityadventurecompany.com.au'], function () {
@@ -34,6 +34,9 @@ Route::group(['domain' => 'accounts.thatdisabilityadventurecompany.com.au'], fun
     Route::post('/webhook/subscription-change', [WebhookController::class, 'handleSubscriptionChange'])
      ->withoutMiddleware([\App\Http\Middleware\VerifyCsrfToken::class])
      ->name('webhook.subscriptionChange');
+     
+     // Contact Form Submission
+     Route::post('/contact', [ContactController::class, 'store'])->name('contact.store');
 
     /*
     |--------------------------------------------------------------------------
@@ -97,6 +100,11 @@ Route::group(['domain' => 'accounts.thatdisabilityadventurecompany.com.au'], fun
                 Route::get('/subscriber-count/{listName}', [BulkEmailController::class, 'subscriberCount'])->name('bulk-emails.subscriber-count');
                 Route::get('/templates', [BulkEmailController::class, 'fetchTemplates'])->name('bulk-emails.templates');
             });
+            
+            // Contact Form
+            Route::get('/admin/contact-submissions', [ContactController::class, 'index'])->name('contact.index');
+            Route::post('/admin/contact-submissions/{id}/mark-spam', [ContactController::class, 'markSpam'])->name('contact.markSpam');
+            Route::post('/admin/contact-submissions/{id}/unblock', [ContactController::class, 'unblockEmail'])->name('contact.unblock');
 
             // Events
             Route::resource('events', EventController::class);

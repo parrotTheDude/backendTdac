@@ -7,5 +7,6 @@ class VerifyCsrfToken extends Middleware
 {
     protected $except = [
         'accounts.thatdisabilityadventurecompany.com.au/webhook/subscription-change',
+        'api/contact', // Exclude contact form API from CSRF
     ];
 }

@@ -6,37 +6,37 @@ use App\Http\Controllers\SubscriptionController;
 use App\Http\Controllers\NewsletterController;
 use App\Http\Controllers\UserController;
 use App\Http\Controllers\CalendarReleaseController;
+use App\Http\Controllers\ContactController;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 
-// Force Laravel to load the file
-require_once app_path('Http/Controllers/SubscriptionController.php');
-
-// Define the API routes for users
-Route::prefix('users')->middleware('auth:sanctum')->group(function () {
-    Route::get('/', [UserController::class, 'index']); // Get all users
-    Route::post('/', [UserController::class, 'store']); // Create a new user
-    Route::get('{id}', [UserController::class, 'show']); // Get a single user by ID
-    Route::put('{id}', [UserController::class, 'update']); // Update a user by ID
-    Route::delete('{id}', [UserController::class, 'destroy']); // Delete a user by ID
+// Users API
+Route::prefix('users')->middleware('api')->group(function () {
+    Route::get('/', [UserController::class, 'index']);
+    Route::post('/', [UserController::class, 'store']);
+    Route::get('{id}', [UserController::class, 'show']);
+    Route::put('{id}', [UserController::class, 'update']);
+    Route::delete('{id}', [UserController::class, 'destroy']);
 });
 
-// Define the API routes for subscriptions
-Route::middleware('api')->group(function () {
-    Route::get('/subscriptions', [SubscriptionController::class, 'index']);
-    Route::post('/subscribe', [SubscriptionController::class, 'subscribe']);
-    Route::post('/unsubscribe', [SubscriptionController::class, 'unsubscribe']);
-});
+// Subscriptions API
+Route::get('/subscriptions', [SubscriptionController::class, 'index']);
+Route::post('/subscribe', [SubscriptionController::class, 'subscribe']);
+Route::post('/unsubscribe', [SubscriptionController::class, 'unsubscribe']);
 
-// BeeFree Webhook to Postmark
+// Contact Form API
+Route::post('/contact', [ContactController::class, 'store']);
+
+// BeeFree Webhook → Postmark
 Route::post('/beefree/webhook', function (Request $request) {
     Log::info('BeeFree Webhook Data:', $request->all());
 
     $templateName = $request->input('name') ?? 'Default Template';
     $htmlBody = $request->input('html');
 
-    if (!$htmlBody) {
-        return response()->json(['error' => 'Invalid data received'], 400);
+    if (!$htmlBody || !$templateName) {
+        Log::error('BeeFree Webhook Missing Data', ['data' => $request->all()]);
+        return response()->json(['error' => 'Missing required fields'], 400);
     }
 
     // Make the API request using Laravel's HTTP client
