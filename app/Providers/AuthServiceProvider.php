@@ -27,7 +27,7 @@ class AuthServiceProvider extends ServiceProvider
         // Define a gate called "access-backend"
         Gate::define('access-backend', function ($user) {
             // Return true if user_type is 'master' or 'super-admin'
-            return in_array($user->user_type, ['master', 'super-admin']);
+            return in_array($user->user_type, ['master', 'superadmin']);
         });
     }
 }

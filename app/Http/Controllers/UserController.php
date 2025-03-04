@@ -122,7 +122,7 @@ public function create()
     $user = User::create($data);
 
     // Send verification email
-    $this->sendVerificationEmail($user);
+    //$this->sendVerificationEmail($user);
 
     // Save subscriptions
     $selectedSubscriptions = $request->input('subscriptions', []);
